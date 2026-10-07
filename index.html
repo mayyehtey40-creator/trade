@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="鑽石股票示意行情互動圖表，每股面額 10 顆鑽石，查看時間軸與區間高低價。"
+    />
+    <meta name="theme-color" content="#080b12" />
+    <title>鑽石股票行情 — 參考走勢</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #080b12;
+        color: #f3f5f9;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        --muted: #8b93a5;
+        --line: rgba(255, 255, 255, 0.08);
+        --accent: #a78bfa;
+        --green: #69d6ae;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(ellipse at 77% 0%, rgba(110, 76, 182, 0.14), transparent 38rem),
+          #080b12;
+      }
+
+      button {
+        color: inherit;
+        font: inherit;
+      }
+
+      .page {
+        width: min(1100px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 36px 0 26px;
+      }
+
+      .topbar,
+      .brand,
+      .periods,
+      .chart-heading,
+      .chart-caption,
+      .stat-heading {
+        display: flex;
+        align-items: center;
+      }
+
+      .topbar,
+      .chart-heading,
+      .stat-heading {
+        justify-content: space-between;
+      }
+
+      .brand {
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 1px solid rgba(190, 170, 255, 0.28);
+        border-radius: 13px;
+        background: linear-gradient(145deg, rgba(153, 122, 236, 0.24), rgba(77, 63, 119, 0.09));
+        color: #c5b5ff;
+      }
+
+      .brand-mark svg {
+        width: 23px;
+        height: 23px;
+      }
+
+      .brand-name {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 650;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-caption {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+      }
+
+      .demo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 11px;
+        border: 1px solid rgba(247, 191, 91, 0.18);
+        border-radius: 99px;
+        background: rgba(247, 191, 91, 0.06);
+        color: #e8c987;
+        font-size: 11px;
+      }
+
+      .demo-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #efbd61;
+        box-shadow: 0 0 10px rgba(239, 189, 97, 0.5);
+      }
+
+      main {
+        padding-top: 66px;
+      }
+
+      .eyebrow {
+        margin: 0 0 11px;
+        color: #ad94f7;
+        font-size: 11px;
+        font-weight: 650;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(32px, 5.5vw, 48px);
+        font-weight: 570;
+        letter-spacing: -0.055em;
+        line-height: 1.12;
+      }
+
+      .intro {
+        max-width: 520px;
+        margin: 15px 0 0;
+        color: #969daf;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .price-overview {
+        display: flex;
+        align-items: end;
+        gap: 15px;
+        margin-top: 35px;
+      }
+
+      .price {
+        font-size: clamp(39px, 7vw, 58px);
+        font-weight: 560;
+        letter-spacing: -0.06em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .unit {
+        padding-bottom: 6px;
+        color: #9ca3b2;
+        font-size: 13px;
+      }
+
+      .change {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 7px;
+        padding: 6px 9px;
+        border-radius: 7px;
+        background: rgba(105, 214, 174, 0.09);
+        color: var(--green);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .chart-card,
+      .stats-card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(19, 23, 34, 0.94), rgba(14, 17, 26, 0.96));
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+      }
+
+      .chart-card {
+        margin-top: 28px;
+        padding: 23px 24px 17px;
+      }
+
+      .chart-heading {
+        gap: 20px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 570;
+      }
+
+      .chart-subtitle {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .periods {
+        gap: 3px;
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        background: rgba(0, 0, 0, 0.16);
+      }
+
+      .period {
+        min-width: 40px;
+        padding: 7px 9px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #959bad;
+        cursor: pointer;
+        font-size: 11px;
+        transition: background 140ms ease, color 140ms ease;
+      }
+
+      .period:hover {
+        color: #fff;
+      }
+
+      .period[aria-pressed="true"] {
+        background: #292238;
+        color: #d2c3ff;
+      }
+
+      .chart-wrap {
+        position: relative;
+        height: 320px;
+        margin-top: 22px;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: pan-y;
+      }
+
+      .tooltip {
+        position: absolute;
+        z-index: 1;
+        min-width: 150px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 9px;
+        background: rgba(16, 18, 27, 0.96);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        font-size: 11px;
+        line-height: 1.7;
+      }
+
+      .tooltip-date {
+        margin-bottom: 4px;
+        color: #a9afbf;
+      }
+
+      .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: #d8dbe4;
+      }
+
+      .tooltip-row span {
+        color: var(--muted);
+      }
+
+      .chart-caption {
+        justify-content: space-between;
+        gap: 12px;
+        margin: 5px 1px 0;
+        color: #777f91;
+        font-size: 10px;
+      }
+
+      .legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .legend-line {
+        width: 15px;
+        height: 2px;
+        border-radius: 2px;
+        background: #43d6a1;
+        box-shadow: 0 0 8px rgba(67, 214, 161, 0.5);
+      }
+
+      .stats-card {
+        margin-top: 14px;
+        padding: 20px 24px 23px;
+      }
+
+      .stat-heading {
+        gap: 12px;
+      }
+
+      .stat-range {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-top: 21px;
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .stat-value {
+        font-size: 16px;
+        font-weight: 540;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stat-value.high {
+        color: #8ee1bd;
+      }
+
+      .stat-value.low {
+        color: #e7a2b0;
+      }
+
+      .disclaimer {
+        margin: 19px 0 0;
+        color: #6f7686;
+        font-size: 10px;
+        line-height: 1.8;
+        text-align: center;
+      }
+
+      @media (max-width: 620px) {
+        .page {
+          width: min(100% - 28px, 520px);
+          padding-top: 21px;
+        }
+
+        main {
+          padding-top: 51px;
+        }
+
+        .chart-card {
+          padding: 18px 13px 13px;
+        }
+
+        .chart-heading {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .periods {
+          width: 100%;
+        }
+
+        .period {
+          flex: 1;
+        }
+
+        .chart-wrap {
+          height: 260px;
+          margin-top: 17px;
+        }
+
+        .stats-card {
+          padding: 18px 16px 20px;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          row-gap: 19px;
+        }
+
+        .chart-caption {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 8.5 7.3 4h9.4L20 8.5 12 20 4 8.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+              <path d="M4.5 8.5h15M7.3 4l2.1 4.5L12 20l2.6-11.5L16.7 4M9.4 8.5 12 4l2.6 4.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <p class="brand-name">DIAMOND INDEX</p>
+            <p class="brand-caption">鑽石參考行情</p>
+          </div>
+        </div>
+        <span class="demo-badge"><span class="demo-dot"></span>示意行情・非即時</span>
+      </header>
+
+      <main>
+        <p class="eyebrow">DIAMOND STOCK</p>
+        <h1>鑽石股票走勢</h1>
+        <p class="intro">每股面額 10 顆鑽石，開盤價設定為 10 顆鑽石；查看示意股價走勢與區間高低價。</p>
+
+        <section class="price-overview" aria-label="目前參考股價">
+          <strong class="price" id="current-price">10.00</strong>
+          <span class="unit">顆鑽石 / 股</span>
+          <span class="change" id="price-change">▲ 0.00%</span>
+        </section>
+
+        <section class="chart-card" aria-labelledby="chart-title">
+          <div class="chart-heading">
+            <div>
+              <h2 id="chart-title">股價走勢</h2>
+              <p class="chart-subtitle">價格（顆鑽石 / 股）・開盤價 10 顆</p>
+            </div>
+            <div class="periods" role="group" aria-label="選擇圖表期間">
+              <button class="period" type="button" data-period="1D" aria-pressed="false">1日</button>
+              <button class="period" type="button" data-period="1W" aria-pressed="false">1週</button>
+              <button class="period" type="button" data-period="1M" aria-pressed="true">1月</button>
+              <button class="period" type="button" data-period="1Y" aria-pressed="false">1年</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="price-chart" role="img" aria-label="鑽石股票示意走勢圖，包含時間軸和顆鑽石每股價格軸">
+              鑽石股票示意走勢圖，每股面額為 10 顆鑽石。
+            </canvas>
+            <div class="tooltip" id="chart-tooltip" role="status" hidden></div>
+          </div>
+          <div class="chart-caption">
+            <span class="legend"><span class="legend-line"></span>股價 <span class="legend-line" style="background:rgba(143,151,169,.55);box-shadow:none"></span>成交量</span>
+            <span id="period-summary" aria-live="polite"></span>
+          </div>
+        </section>
+
+        <section class="stats-card" aria-labelledby="stats-title">
+          <div class="stat-heading">
+            <h2 id="stats-title">區間價格摘要</h2>
+            <span class="stat-range" id="stats-range">近 1 個月</span>
+          </div>
+          <div class="stats-grid">
+            <div><span class="stat-label">開盤價</span><strong class="stat-value" id="stat-open">10.00 顆</strong></div>
+            <div><span class="stat-label">區間最高</span><strong class="stat-value high" id="stat-high">— 顆</strong></div>
+            <div><span class="stat-label">區間最低</span><strong class="stat-value low" id="stat-low">— 顆</strong></div>
+            <div><span class="stat-label">最新參考</span><strong class="stat-value" id="stat-close">— 顆</strong></div>
+          </div>
+        </section>
+        <p class="disclaimer">本頁每股面額設定為 10 顆鑽石；股價與走勢為程式產生的示意資料，並非實際報價、交易資訊或投資建議。</p>
+      </main>
+    </div>
+    <script>
+      (() => {
+        const canvas = document.getElementById("price-chart");
+        const context = canvas.getContext("2d");
+        const tooltip = document.getElementById("chart-tooltip");
+        const chartWrap = document.querySelector(".chart-wrap");
+        const buttons = [...document.querySelectorAll(".period")];
+        const rangeConfig = {
+          "1D": { count: 24, span: 1, unit: "hour", label: "近 1 日" },
+          "1W": { count: 28, span: 7, unit: "hour", label: "近 1 週" },
+          "1M": { count: 30, span: 30, unit: "day", label: "近 1 個月" },
+          "1Y": { count: 52, span: 364, unit: "day", label: "近 1 年" },
+        };
+        const margins = { top: 18, right: 69, bottom: 35, left: 10 };
+        const risingColor = "#43d6a1";
+        const fallingColor = "#f06470";
+        const quote = new Intl.NumberFormat("zh-TW", {
+          maximumFractionDigits: 0,
+        });
+        const formatQuote = (value) => `${quote.format(value)} 顆`;
+        let activePeriod = "1M";
+        let points = [];
+        let plot = null;
+        let hoveredIndex = -1;
+
+        function makeSeries(period) {
+          const config = rangeConfig[period];
+          const now = Date.now();
+          const start =
+            period === "1D"
+              ? (() => {
+                  const today = new Date(now);
+                  return new Date(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    today.getDate() - 1,
+                    20,
+                  ).getTime();
+                })()
+              : now - config.span * 24 * 60 * 60 * 1000;
+          let previousClose = 10;
+          return Array.from({ length: config.count }, (_, index) => {
+            const progress = index / (config.count - 1);
+            const base =
+              10 +
+              1.25 * progress +
+              1.05 * Math.sin(index * 0.47) +
+              0.55 * Math.sin(index * 1.31 + 0.7) +
+              0.32 * Math.cos(index * 0.19);
+            const open = index === 0 ? 10 : previousClose;
+            const close = index === 0 ? 10 : Math.max(2, Math.round(base));
+            const high = Math.max(open, close) + 1 + (index % 3 === 0 ? 1 : 0);
+            const low = Math.max(1, Math.min(open, close) - 1 - (index % 4 === 0 ? 1 : 0));
+            const timestamp = start + progress * (now - start);
+            const point = {
+              date: new Date(timestamp),
+              open,
+              high,
+              low,
+              close,
+              volume: 800 + Math.round(900 * Math.abs(Math.sin(index * 0.73 + 0.3))) + (index % 7) * 55,
+            };
+            previousClose = close;
+            return point;
+          });
+        }
+
+        function formatDate(date, period, detailed = false) {
+          const options =
+            period === "1D"
+              ? { month: "numeric", day: "numeric", hour: "2-digit", minute: detailed ? "2-digit" : undefined }
+              : period === "1Y"
+                ? { year: "2-digit", month: "short" }
+                : { month: "numeric", day: "numeric", ...(detailed ? { hour: "2-digit", minute: "2-digit" } : {}) };
+          return new Intl.DateTimeFormat("zh-TW", options).format(date);
+        }
+
+        function roundedBounds(minimum, maximum) {
+          const roughStep = Math.max(1, (maximum - minimum) / 4);
+          const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+          const normalized = roughStep / magnitude;
+          const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+          const low = Math.floor(minimum / step) * step;
+          const high = Math.ceil(maximum / step) * step;
+          return { low, high, step };
+        }
+
+        function draw() {
+          const rect = canvas.getBoundingClientRect();
+          if (!rect.width || !rect.height) return;
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = Math.round(rect.width * ratio);
+          canvas.height = Math.round(rect.height * ratio);
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          const width = rect.width;
+          const height = rect.height;
+          const { top, right, bottom, left } = margins;
+          plot = { x: left, y: top, width: width - left - right, height: height - top - bottom };
+
+          const { low: min, high: max, step } = roundedBounds(
+            Math.min(...points.map((point) => point.low)),
+            Math.max(...points.map((point) => point.high)),
+          );
+          const priceHeight = plot.height * 0.72;
+          const volumeTop = plot.y + plot.height * 0.81;
+          const volumeHeight = plot.y + plot.height - volumeTop;
+          const slotWidth = plot.width / points.length;
+          const maxVolume = Math.max(...points.map((point) => point.volume));
+          const y = (value) => plot.y + ((max - value) / (max - min)) * priceHeight;
+          const x = (index) => plot.x + (index + 0.5) * slotWidth;
+          context.clearRect(0, 0, width, height);
+          context.font = "10px system-ui, sans-serif";
+          context.textBaseline = "middle";
+
+          for (let value = min; value <= max; value += step) {
+            const lineY = y(value);
+            context.beginPath();
+            context.strokeStyle = "rgba(255,255,255,0.075)";
+            context.lineWidth = 1;
+            context.setLineDash([2, 5]);
+            context.moveTo(plot.x, lineY);
+            context.lineTo(plot.x + plot.width, lineY);
+            context.stroke();
+            context.setLineDash([]);
+            context.fillStyle = "#878e9e";
+            context.textAlign = "left";
+            context.fillText(quote.format(value), plot.x + plot.width + 11, lineY);
+          }
+
+          const lineColor = points[points.length - 1].close >= points[0].open ? risingColor : fallingColor;
+          const priceLine = new Path2D();
+          points.forEach((point, index) => {
+            if (index === 0) priceLine.moveTo(x(index), y(point.close));
+            else priceLine.lineTo(x(index), y(point.close));
+          });
+          const area = new Path2D(priceLine);
+          area.lineTo(x(points.length - 1), plot.y + priceHeight);
+          area.lineTo(x(0), plot.y + priceHeight);
+          area.closePath();
+          const fill = context.createLinearGradient(0, plot.y, 0, plot.y + priceHeight);
+          fill.addColorStop(0, lineColor === risingColor ? "rgba(67,214,161,0.13)" : "rgba(240,100,112,0.13)");
+          fill.addColorStop(1, "rgba(13,17,25,0)");
+          context.fillStyle = fill;
+          context.fill(area);
+          context.beginPath();
+          points.forEach((point, index) => {
+            if (index === 0) context.moveTo(x(index), y(point.close));
+            else context.lineTo(x(index), y(point.close));
+          });
+          context.strokeStyle = lineColor;
+          context.lineWidth = 2.5;
+          context.lineJoin = "round";
+          context.lineCap = "round";
+          context.shadowColor = lineColor;
+          context.shadowBlur = 7;
+          context.stroke();
+          context.shadowBlur = 0;
+
+          const lastPoint = points[points.length - 1];
+          const lastX = x(points.length - 1);
+          const lastY = y(lastPoint.close);
+          context.beginPath();
+          context.strokeStyle = lineColor;
+          context.globalAlpha = 0.48;
+          context.setLineDash([3, 4]);
+          context.moveTo(plot.x, lastY);
+          context.lineTo(plot.x + plot.width + 3, lastY);
+          context.stroke();
+          context.setLineDash([]);
+          context.globalAlpha = 1;
+          context.beginPath();
+          context.fillStyle = "#10141d";
+          context.arc(lastX, lastY, 5, 0, Math.PI * 2);
+          context.fill();
+          context.beginPath();
+          context.fillStyle = lineColor;
+          context.arc(lastX, lastY, 3, 0, Math.PI * 2);
+          context.fill();
+          const priceTagY = Math.max(plot.y, Math.min(lastY - 9, plot.y + priceHeight - 18));
+          context.fillStyle = lineColor;
+          context.beginPath();
+          context.roundRect(plot.x + plot.width + 7, priceTagY, right - 14, 18, 4);
+          context.fill();
+          context.fillStyle = "#08100e";
+          context.font = "10px system-ui, sans-serif";
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.fillText(quote.format(lastPoint.close), plot.x + plot.width + 7 + (right - 14) / 2, priceTagY + 9);
+
+          points.forEach((point, index) => {
+            const barHeight = Math.max(2, (point.volume / maxVolume) * volumeHeight);
+            context.fillStyle = index > 0 && point.close >= point.open ? risingColor : fallingColor;
+            context.globalAlpha = index === hoveredIndex ? 0.55 : 0.26;
+            const barWidth = Math.max(2, Math.min(7, slotWidth * 0.62));
+            context.fillRect(
+              x(index) - barWidth / 2,
+              volumeTop + volumeHeight - barHeight,
+              barWidth,
+              barHeight,
+            );
+            context.globalAlpha = 1;
+          });
+
+          context.beginPath();
+          context.strokeStyle = "rgba(255,255,255,0.09)";
+          context.lineWidth = 1;
+          context.moveTo(plot.x, volumeTop - 5);
+          context.lineTo(plot.x + plot.width, volumeTop - 5);
+          context.stroke();
+          context.fillStyle = "#7f8797";
+          context.textAlign = "left";
+          context.textBaseline = "top";
+          context.fillText("VOL", plot.x + 3, volumeTop + 3);
+
+          const labelIndices = [...new Set([0, Math.floor((points.length - 1) / 3), Math.floor(2 * (points.length - 1) / 3), points.length - 1])];
+          context.fillStyle = "#7f8797";
+          context.textAlign = "center";
+          context.textBaseline = "top";
+          labelIndices.forEach((index) => {
+            context.fillText(formatDate(points[index].date, activePeriod), x(index), plot.y + plot.height + 13);
+          });
+
+          if (hoveredIndex >= 0) {
+            context.beginPath();
+            context.strokeStyle = "rgba(220,225,236,0.38)";
+            context.setLineDash([3, 4]);
+            context.moveTo(x(hoveredIndex), plot.y);
+            context.lineTo(x(hoveredIndex), plot.y + plot.height);
+            context.stroke();
+            context.setLineDash([]);
+          }
+        }
+
+        function updateStats() {
+          const first = points[0];
+          const last = points[points.length - 1];
+          const highest = Math.max(...points.map((point) => point.high));
+          const lowest = Math.min(...points.map((point) => point.low));
+          const change = ((last.close - first.open) / first.open) * 100;
+          document.getElementById("current-price").textContent = quote.format(last.close);
+          document.getElementById("price-change").textContent =
+            `${change >= 0 ? "▲" : "▼"} ${Math.round(Math.abs(change))}%`;
+          document.getElementById("price-change").style.color = change >= 0 ? "#69d6ae" : "#f09bab";
+          document.getElementById("price-change").style.background =
+            change >= 0 ? "rgba(105,214,174,0.09)" : "rgba(240,155,171,0.09)";
+          document.getElementById("stat-open").textContent = formatQuote(first.open);
+          document.getElementById("stat-high").textContent = formatQuote(highest);
+          document.getElementById("stat-low").textContent = formatQuote(lowest);
+          document.getElementById("stat-close").textContent = formatQuote(last.close);
+          document.getElementById("stats-range").textContent = rangeConfig[activePeriod].label;
+          document.getElementById("period-summary").textContent =
+            `${formatDate(first.date, activePeriod)} – ${formatDate(last.date, activePeriod)}`;
+          canvas.setAttribute(
+            "aria-label",
+            `${rangeConfig[activePeriod].label}鑽石股票示意走勢圖，每股面額 10 顆鑽石，最高 ${formatQuote(highest)}，最低 ${formatQuote(lowest)}`,
+          );
+        }
+
+        function selectPeriod(period) {
+          activePeriod = period;
+          hoveredIndex = -1;
+          tooltip.hidden = true;
+          buttons.forEach((button) => {
+            button.setAttribute("aria-pressed", String(button.dataset.period === period));
+          });
+          points = makeSeries(period);
+          updateStats();
+          draw();
+        }
+
+        function movePointer(event) {
+          if (!plot) return;
+          const rect = canvas.getBoundingClientRect();
+          const pointerX = event.clientX - rect.left;
+          if (pointerX < plot.x || pointerX > plot.x + plot.width) {
+            hoveredIndex = -1;
+            tooltip.hidden = true;
+            draw();
+            return;
+          }
+          hoveredIndex = Math.max(
+            0,
+            Math.min(points.length - 1, Math.round(((pointerX - plot.x) / plot.width) * (points.length - 1))),
+          );
+          const point = points[hoveredIndex];
+          tooltip.innerHTML =
+            `<div class="tooltip-date">${formatDate(point.date, activePeriod, true)}</div>` +
+            `<div class="tooltip-row"><span>開盤</span><strong>${formatQuote(point.open)}</strong></div>` +
+            `<div class="tooltip-row"><span>最高</span><strong>${formatQuote(point.high)}</strong></div>` +
+            `<div class="tooltip-row"><span>最低</span><strong>${formatQuote(point.low)}</strong></div>` +
+            `<div class="tooltip-row"><span>收盤</span><strong>${formatQuote(point.close)}</strong></div>` +
+            `<div class="tooltip-row"><span>成交量</span><strong>${quote.format(point.volume)} 股</strong></div>`;
+          tooltip.hidden = false;
+          const left = Math.min(
+            Math.max(8, pointerX + 14),
+            chartWrap.clientWidth - tooltip.offsetWidth - 8,
+          );
+          tooltip.style.left = `${left}px`;
+          tooltip.style.top = `${Math.max(8, plot.y + 10)}px`;
+          draw();
+        }
+
+        buttons.forEach((button) => {
+          button.addEventListener("click", () => selectPeriod(button.dataset.period));
+        });
+        canvas.addEventListener("pointermove", movePointer);
+        canvas.addEventListener("pointerleave", () => {
+          hoveredIndex = -1;
+          tooltip.hidden = true;
+          draw();
+        });
+        new ResizeObserver(draw).observe(chartWrap);
+        selectPeriod(activePeriod);
+      })();
+    </script>
+  </body>
+</html>
