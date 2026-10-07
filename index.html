@@ -859,9 +859,10 @@
           const highest = Math.max(...points.map((point) => point.high));
           const lowest = Math.min(...points.map((point) => point.low));
           const change = ((last.close - first.open) / first.open) * 100;
+          const changeMagnitude = change === 0 ? 0 : Math.max(10, Math.round(Math.abs(change)));
           document.getElementById("current-price").textContent = quote.format(last.close);
           document.getElementById("price-change").textContent =
-            `${change >= 0 ? "▲" : "▼"} ${Math.round(Math.abs(change))}%`;
+            `${change >= 0 ? "▲" : "▼"} ${changeMagnitude}%`;
           document.getElementById("price-change").style.color = change >= 0 ? "#69d6ae" : "#f09bab";
           document.getElementById("price-change").style.background =
             change >= 0 ? "rgba(105,214,174,0.09)" : "rgba(240,155,171,0.09)";
