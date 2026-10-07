@@ -523,7 +523,9 @@
           maximumFractionDigits: 0,
         });
         const formatQuote = (value) => `${quote.format(value)} 顆`;
-        let activePeriod = "1M";
+        const periodStorageKey = "diamond-stock-selected-period";
+        const savedPeriod = window.localStorage.getItem(periodStorageKey);
+        let activePeriod = Object.hasOwn(rangeConfig, savedPeriod) ? savedPeriod : "1M";
         let points = [];
         let forecastPoints = [];
         let plot = null;
@@ -817,7 +819,9 @@
         }
 
         function selectPeriod(period) {
+          if (!Object.hasOwn(rangeConfig, period)) return;
           activePeriod = period;
+          window.localStorage.setItem(periodStorageKey, period);
           hoveredIndex = -1;
           tooltip.hidden = true;
           buttons.forEach((button) => {
