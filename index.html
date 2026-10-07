@@ -112,6 +112,14 @@
         font-size: 11px;
       }
 
+      .update-time {
+        padding-left: 8px;
+        border-left: 1px solid rgba(247, 191, 91, 0.2);
+        color: #c4aa76;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+      }
+
       .demo-dot {
         width: 6px;
         height: 6px;
@@ -302,8 +310,19 @@
         width: 15px;
         height: 2px;
         border-radius: 2px;
+      }
+
+      .legend-line-up {
+        background: #f06470;
+      }
+
+      .legend-line-down {
         background: #43d6a1;
-        box-shadow: 0 0 8px rgba(67, 214, 161, 0.5);
+      }
+
+      .legend-line-forecast {
+        height: 0;
+        border-top: 1px dashed #a78bfa;
       }
 
       .stats-card {
@@ -429,25 +448,25 @@
             <p class="brand-caption">鑽石參考行情</p>
           </div>
         </div>
-        <span class="demo-badge"><span class="demo-dot"></span>示意行情・非即時</span>
+        <span class="demo-badge"><span class="demo-dot"></span>示意行情・每分鐘更新 <span class="update-time" id="updated-time">更新時間 --:--</span></span>
       </header>
 
       <main>
         <p class="eyebrow">DIAMOND STOCK</p>
         <h1>鑽石股票走勢</h1>
-        <p class="intro">每股面額 10 顆鑽石，開盤價設定為 10 顆鑽石；查看示意股價走勢與區間高低價。</p>
+        <p class="intro">每股面額 10 顆鑽石，開盤價設定為 10 顆鑽石；預估線依近期走勢推算。</p>
 
         <section class="price-overview" aria-label="目前參考股價">
-          <strong class="price" id="current-price">10.00</strong>
+          <strong class="price" id="current-price">10</strong>
           <span class="unit">顆鑽石 / 股</span>
-          <span class="change" id="price-change">▲ 0.00%</span>
+          <span class="change" id="price-change">▲ 0%</span>
         </section>
 
         <section class="chart-card" aria-labelledby="chart-title">
           <div class="chart-heading">
             <div>
-              <h2 id="chart-title">股價走勢</h2>
-              <p class="chart-subtitle">價格（顆鑽石 / 股）・開盤價 10 顆</p>
+              <h2 id="chart-title">股價與預估走勢</h2>
+              <p class="chart-subtitle">價格（顆鑽石 / 股）・虛線依近期趨勢推算</p>
             </div>
             <div class="periods" role="group" aria-label="選擇圖表期間">
               <button class="period" type="button" data-period="1D" aria-pressed="false">1日</button>
@@ -463,7 +482,7 @@
             <div class="tooltip" id="chart-tooltip" role="status" hidden></div>
           </div>
           <div class="chart-caption">
-            <span class="legend"><span class="legend-line"></span>股價 <span class="legend-line" style="background:rgba(143,151,169,.55);box-shadow:none"></span>成交量</span>
+            <span class="legend"><span class="legend-line legend-line-up"></span>股價 <span class="legend-line legend-line-forecast"></span>預估</span>
             <span id="period-summary" aria-live="polite"></span>
           </div>
         </section>
@@ -480,7 +499,7 @@
             <div><span class="stat-label">最新參考</span><strong class="stat-value" id="stat-close">— 顆</strong></div>
           </div>
         </section>
-        <p class="disclaimer">本頁每股面額設定為 10 顆鑽石；股價與走勢為程式產生的示意資料，並非實際報價、交易資訊或投資建議。</p>
+        <p class="disclaimer">本頁每股面額設定為 10 顆鑽石；行情為示意資料，預估線依近期價格趨勢計算，僅供展示，非即時報價或實際預測。</p>
       </main>
     </div>
     <script>
@@ -497,16 +516,24 @@
           "1Y": { count: 52, span: 364, unit: "day", label: "近 1 年" },
         };
         const margins = { top: 18, right: 69, bottom: 35, left: 10 };
-        const risingColor = "#43d6a1";
-        const fallingColor = "#f06470";
+        const risingColor = "#f06470";
+        const fallingColor = "#43d6a1";
+        const forecastColor = "#a78bfa";
         const quote = new Intl.NumberFormat("zh-TW", {
           maximumFractionDigits: 0,
         });
         const formatQuote = (value) => `${quote.format(value)} 顆`;
         let activePeriod = "1M";
         let points = [];
+        let forecastPoints = [];
         let plot = null;
         let hoveredIndex = -1;
+        let hoveredForecastIndex = -1;
+
+        function updateTimestamp(timestamp = Date.now()) {
+          document.getElementById("updated-time").textContent =
+            `更新時間 ${new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(timestamp)}`;
+        }
 
         function makeSeries(period) {
           const config = rangeConfig[period];
@@ -543,7 +570,6 @@
               high,
               low,
               close,
-              volume: 800 + Math.round(900 * Math.abs(Math.sin(index * 0.73 + 0.3))) + (index % 7) * 55,
             };
             previousClose = close;
             return point;
@@ -570,6 +596,44 @@
           return { low, high, step };
         }
 
+        function makeForecast() {
+          const last = points[points.length - 1];
+          const config = rangeConfig[activePeriod];
+          const recent = points.slice(-10);
+          const meanX = (recent.length - 1) / 2;
+          const meanY = recent.reduce((sum, point) => sum + point.close, 0) / recent.length;
+          const denominator = recent.reduce((sum, _, index) => sum + (index - meanX) ** 2, 0);
+          const slope =
+            recent.reduce(
+              (sum, point, index) => sum + (index - meanX) * (point.close - meanY),
+              0,
+            ) / denominator;
+          const residualSpread = Math.sqrt(
+            recent.reduce(
+              (sum, point, index) => sum + (point.close - (meanY + slope * (index - meanX))) ** 2,
+              0,
+            ) / recent.length,
+          );
+          const interval = (config.span * 24 * 60 * 60 * 1000) / (config.count - 1);
+
+          return Array.from({ length: 7 }, (_, index) => {
+            if (index === 0) {
+              return { date: last.date, close: last.close, lower: last.close, upper: last.close };
+            }
+            const close = Math.max(
+              1,
+              Math.round(last.close + slope * index),
+            );
+            const confidence = Math.max(1, Math.ceil(residualSpread * Math.sqrt(index)));
+            return {
+              date: new Date(last.date.getTime() + interval * index),
+              close,
+              lower: Math.max(1, close - confidence),
+              upper: close + confidence,
+            };
+          });
+        }
+
         function draw() {
           const rect = canvas.getBoundingClientRect();
           if (!rect.width || !rect.height) return;
@@ -582,17 +646,17 @@
           const { top, right, bottom, left } = margins;
           plot = { x: left, y: top, width: width - left - right, height: height - top - bottom };
 
-          const { low: min, high: max, step } = roundedBounds(
-            Math.min(...points.map((point) => point.low)),
-            Math.max(...points.map((point) => point.high)),
+          const bounds = roundedBounds(
+            Math.min(...points.map((point) => point.low), ...forecastPoints.map((point) => point.lower)),
+            Math.max(...points.map((point) => point.high), ...forecastPoints.map((point) => point.upper)),
           );
-          const priceHeight = plot.height * 0.72;
-          const volumeTop = plot.y + plot.height * 0.81;
-          const volumeHeight = plot.y + plot.height - volumeTop;
-          const slotWidth = plot.width / points.length;
-          const maxVolume = Math.max(...points.map((point) => point.volume));
+          const { low: min, high: max, step } = bounds;
+          const priceHeight = plot.height;
+          const actualWidth = plot.width * 0.78;
+          const forecastWidth = plot.width - actualWidth;
           const y = (value) => plot.y + ((max - value) / (max - min)) * priceHeight;
-          const x = (index) => plot.x + (index + 0.5) * slotWidth;
+          const x = (index) => plot.x + (index / (points.length - 1)) * actualWidth;
+          const forecastX = (index) => plot.x + actualWidth + (index / (forecastPoints.length - 1)) * forecastWidth;
           context.clearRect(0, 0, width, height);
           context.font = "10px system-ui, sans-serif";
           context.textBaseline = "middle";
@@ -600,13 +664,11 @@
           for (let value = min; value <= max; value += step) {
             const lineY = y(value);
             context.beginPath();
-            context.strokeStyle = "rgba(255,255,255,0.075)";
+            context.strokeStyle = "rgba(255,255,255,0.055)";
             context.lineWidth = 1;
-            context.setLineDash([2, 5]);
             context.moveTo(plot.x, lineY);
             context.lineTo(plot.x + plot.width, lineY);
             context.stroke();
-            context.setLineDash([]);
             context.fillStyle = "#878e9e";
             context.textAlign = "left";
             context.fillText(quote.format(value), plot.x + plot.width + 11, lineY);
@@ -623,30 +685,60 @@
           area.lineTo(x(0), plot.y + priceHeight);
           area.closePath();
           const fill = context.createLinearGradient(0, plot.y, 0, plot.y + priceHeight);
-          fill.addColorStop(0, lineColor === risingColor ? "rgba(67,214,161,0.13)" : "rgba(240,100,112,0.13)");
+          fill.addColorStop(0, lineColor === risingColor ? "rgba(240,100,112,0.09)" : "rgba(67,214,161,0.09)");
           fill.addColorStop(1, "rgba(13,17,25,0)");
           context.fillStyle = fill;
           context.fill(area);
-          context.beginPath();
           points.forEach((point, index) => {
-            if (index === 0) context.moveTo(x(index), y(point.close));
-            else context.lineTo(x(index), y(point.close));
+            if (index === 0) return;
+            context.beginPath();
+            context.moveTo(x(index - 1), y(points[index - 1].close));
+            context.lineTo(x(index), y(point.close));
+            context.strokeStyle = point.close >= points[index - 1].close ? risingColor : fallingColor;
+            context.lineWidth = 2;
+            context.lineJoin = "round";
+            context.lineCap = "round";
+            context.stroke();
           });
-          context.strokeStyle = lineColor;
-          context.lineWidth = 2.5;
-          context.lineJoin = "round";
+
+          const band = new Path2D();
+          forecastPoints.forEach((point, index) => {
+            const px = forecastX(index);
+            if (index === 0) band.moveTo(px, y(point.upper));
+            else band.lineTo(px, y(point.upper));
+          });
+          for (let index = forecastPoints.length - 1; index >= 0; index -= 1) {
+            band.lineTo(forecastX(index), y(forecastPoints[index].lower));
+          }
+          band.closePath();
+          context.fillStyle = "rgba(167,139,250,0.08)";
+          context.fill(band);
+
+          context.beginPath();
+          context.moveTo(x(points.length - 1), y(points[points.length - 1].close));
+          forecastPoints.slice(1).forEach((point, index) => {
+            context.lineTo(forecastX(index + 1), y(point.close));
+          });
+          context.strokeStyle = forecastColor;
+          context.lineWidth = 2;
+          context.setLineDash([5, 5]);
           context.lineCap = "round";
-          context.shadowColor = lineColor;
-          context.shadowBlur = 7;
           context.stroke();
-          context.shadowBlur = 0;
+          context.setLineDash([]);
+
+          const forecastLast = forecastPoints[forecastPoints.length - 1];
+          context.fillStyle = forecastColor;
+          context.font = "10px system-ui, sans-serif";
+          context.textAlign = "right";
+          context.textBaseline = "bottom";
+          context.fillText("預估", forecastX(forecastPoints.length - 1) - 5, y(forecastLast.close) - 7);
 
           const lastPoint = points[points.length - 1];
           const lastX = x(points.length - 1);
           const lastY = y(lastPoint.close);
           context.beginPath();
           context.strokeStyle = lineColor;
-          context.globalAlpha = 0.48;
+          context.globalAlpha = 0.32;
           context.setLineDash([3, 4]);
           context.moveTo(plot.x, lastY);
           context.lineTo(plot.x + plot.width + 3, lastY);
@@ -672,31 +764,6 @@
           context.textBaseline = "middle";
           context.fillText(quote.format(lastPoint.close), plot.x + plot.width + 7 + (right - 14) / 2, priceTagY + 9);
 
-          points.forEach((point, index) => {
-            const barHeight = Math.max(2, (point.volume / maxVolume) * volumeHeight);
-            context.fillStyle = index > 0 && point.close >= point.open ? risingColor : fallingColor;
-            context.globalAlpha = index === hoveredIndex ? 0.55 : 0.26;
-            const barWidth = Math.max(2, Math.min(7, slotWidth * 0.62));
-            context.fillRect(
-              x(index) - barWidth / 2,
-              volumeTop + volumeHeight - barHeight,
-              barWidth,
-              barHeight,
-            );
-            context.globalAlpha = 1;
-          });
-
-          context.beginPath();
-          context.strokeStyle = "rgba(255,255,255,0.09)";
-          context.lineWidth = 1;
-          context.moveTo(plot.x, volumeTop - 5);
-          context.lineTo(plot.x + plot.width, volumeTop - 5);
-          context.stroke();
-          context.fillStyle = "#7f8797";
-          context.textAlign = "left";
-          context.textBaseline = "top";
-          context.fillText("VOL", plot.x + 3, volumeTop + 3);
-
           const labelIndices = [...new Set([0, Math.floor((points.length - 1) / 3), Math.floor(2 * (points.length - 1) / 3), points.length - 1])];
           context.fillStyle = "#7f8797";
           context.textAlign = "center";
@@ -704,13 +771,21 @@
           labelIndices.forEach((index) => {
             context.fillText(formatDate(points[index].date, activePeriod), x(index), plot.y + plot.height + 13);
           });
+          context.fillStyle = forecastColor;
+          context.textAlign = "right";
+          context.fillText(
+            formatDate(forecastLast.date, activePeriod),
+            forecastX(forecastPoints.length - 1),
+            plot.y + plot.height + 13,
+          );
 
-          if (hoveredIndex >= 0) {
+          if (hoveredIndex >= 0 || hoveredForecastIndex >= 0) {
+            const hoverX = hoveredForecastIndex >= 0 ? forecastX(hoveredForecastIndex) : x(hoveredIndex);
             context.beginPath();
             context.strokeStyle = "rgba(220,225,236,0.38)";
             context.setLineDash([3, 4]);
-            context.moveTo(x(hoveredIndex), plot.y);
-            context.lineTo(x(hoveredIndex), plot.y + plot.height);
+            context.moveTo(hoverX, plot.y);
+            context.lineTo(hoverX, plot.y + plot.height);
             context.stroke();
             context.setLineDash([]);
           }
@@ -749,6 +824,24 @@
             button.setAttribute("aria-pressed", String(button.dataset.period === period));
           });
           points = makeSeries(period);
+          forecastPoints = makeForecast();
+          updateTimestamp();
+          updateStats();
+          draw();
+        }
+
+        function refreshQuote() {
+          const last = points[points.length - 1];
+          const previousClose = last.close;
+          forecastPoints = makeForecast();
+          const close = forecastPoints[1].close;
+          last.date = new Date();
+          last.open = previousClose;
+          last.close = close;
+          last.high = Math.max(last.open, close);
+          last.low = Math.max(1, Math.min(last.open, close));
+          forecastPoints = makeForecast();
+          updateTimestamp();
           updateStats();
           draw();
         }
@@ -763,18 +856,35 @@
             draw();
             return;
           }
-          hoveredIndex = Math.max(
-            0,
-            Math.min(points.length - 1, Math.round(((pointerX - plot.x) / plot.width) * (points.length - 1))),
-          );
-          const point = points[hoveredIndex];
-          tooltip.innerHTML =
-            `<div class="tooltip-date">${formatDate(point.date, activePeriod, true)}</div>` +
-            `<div class="tooltip-row"><span>開盤</span><strong>${formatQuote(point.open)}</strong></div>` +
-            `<div class="tooltip-row"><span>最高</span><strong>${formatQuote(point.high)}</strong></div>` +
-            `<div class="tooltip-row"><span>最低</span><strong>${formatQuote(point.low)}</strong></div>` +
-            `<div class="tooltip-row"><span>收盤</span><strong>${formatQuote(point.close)}</strong></div>` +
-            `<div class="tooltip-row"><span>成交量</span><strong>${quote.format(point.volume)} 股</strong></div>`;
+          const actualWidth = plot.width * 0.78;
+          if (pointerX > plot.x + actualWidth) {
+            hoveredIndex = -1;
+            hoveredForecastIndex = Math.max(
+              1,
+              Math.min(
+                forecastPoints.length - 1,
+                Math.round(((pointerX - plot.x - actualWidth) / (plot.width - actualWidth)) * (forecastPoints.length - 1)),
+              ),
+            );
+            const point = forecastPoints[hoveredForecastIndex];
+            tooltip.innerHTML =
+              `<div class="tooltip-date">預估・${formatDate(point.date, activePeriod, true)}</div>` +
+              `<div class="tooltip-row"><span>預估股價</span><strong>${formatQuote(point.close)}</strong></div>` +
+              `<div class="tooltip-row"><span>示意範圍</span><strong>${quote.format(point.lower)}–${quote.format(point.upper)} 顆</strong></div>`;
+          } else {
+            hoveredForecastIndex = -1;
+            hoveredIndex = Math.max(
+              0,
+              Math.min(points.length - 1, Math.round(((pointerX - plot.x) / actualWidth) * (points.length - 1))),
+            );
+            const point = points[hoveredIndex];
+            tooltip.innerHTML =
+              `<div class="tooltip-date">${formatDate(point.date, activePeriod, true)}</div>` +
+              `<div class="tooltip-row"><span>開盤</span><strong>${formatQuote(point.open)}</strong></div>` +
+              `<div class="tooltip-row"><span>最高</span><strong>${formatQuote(point.high)}</strong></div>` +
+              `<div class="tooltip-row"><span>最低</span><strong>${formatQuote(point.low)}</strong></div>` +
+              `<div class="tooltip-row"><span>收盤</span><strong>${formatQuote(point.close)}</strong></div>`;
+          }
           tooltip.hidden = false;
           const left = Math.min(
             Math.max(8, pointerX + 14),
@@ -791,11 +901,19 @@
         canvas.addEventListener("pointermove", movePointer);
         canvas.addEventListener("pointerleave", () => {
           hoveredIndex = -1;
+          hoveredForecastIndex = -1;
           tooltip.hidden = true;
           draw();
         });
         new ResizeObserver(draw).observe(chartWrap);
         selectPeriod(activePeriod);
+        window.setTimeout(
+          () => {
+            refreshQuote();
+            window.setInterval(refreshQuote, 60_000);
+          },
+          60_000 - (Date.now() % 60_000),
+        );
       })();
     </script>
   </body>
