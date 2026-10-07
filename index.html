@@ -860,7 +860,7 @@
 
           const labelIndices =
             width < 520
-              ? [0, points.length - 1]
+              ? [0]
               : [...new Set([0, Math.floor((points.length - 1) / 3), Math.floor(2 * (points.length - 1) / 3), points.length - 1])];
           context.fillStyle = "#7f8797";
           context.textAlign = "center";
